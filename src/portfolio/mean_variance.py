@@ -56,17 +56,21 @@ def min_risk(
     constraints = []
 
     # Sum of weights = 1
-    constraints.append({
-        "type": "eq",
-        "fun": lambda w: np.sum(w) - 1.0,
-    })
+    constraints.append(
+        {
+            "type": "eq",
+            "fun": lambda w: np.sum(w) - 1.0,
+        }
+    )
 
     # Optional target return constraint
     if target_return is not None:
-        constraints.append({
-            "type": "ineq",
-            "fun": lambda w: mu @ w - target_return,
-        })
+        constraints.append(
+            {
+                "type": "ineq",
+                "fun": lambda w: mu @ w - target_return,
+            }
+        )
 
     # Bounds for weights
     if short_selling:

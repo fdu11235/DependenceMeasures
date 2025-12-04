@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+src/mv_mi_weights_1y_2023_onwards.csv
+src/mv_weights_1y_2023_onwards.csv
+src/data/smi_closing_prices.xlsx
+src/data/smi_market_cap.xlsx
+src/data/smi_prices_cleaned.xlsx
+src/data/smi.xlsx

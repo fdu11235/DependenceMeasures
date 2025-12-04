@@ -1,14 +1,11 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import entropy as shannon_entropy
-from .utils import digitize_returns, fast_entropy, fast_mi
+from .utils import digitize_returns, entropy, mi
 
 
 def entropy_mi_matrix(
-    df_ret: pd.DataFrame,
-    min_ret: float = -0.5,
-    max_ret: float = 0.5,
-    n_bins: int = 101
+    df_ret: pd.DataFrame, min_ret: float = -0.5, max_ret: float = 0.5, n_bins: int = 101
 ) -> pd.DataFrame:
     """
     Build the entropy + mutual information risk matrix as in Novais et al. (2022):
@@ -40,10 +37,7 @@ def entropy_mi_matrix(
 
     # Discretize continuous returns
     digitized, bins = digitize_returns(
-        df_ret,
-        min_ret=min_ret,
-        max_ret=max_ret,
-        n_bins=n_bins
+        df_ret, min_ret=min_ret, max_ret=max_ret, n_bins=n_bins
     )
 
     n_states = n_bins - 1
@@ -52,15 +46,15 @@ def entropy_mi_matrix(
     # Diagonal = Entropy
     for i in range(n_assets):
         Xi = digitized[:, i]
-        Sigma[i, i] = fast_entropy(Xi, n_states)
+        Sigma[i, i] = entropy(Xi, n_states)
 
     # Off-diagonals = Mutual Information
     for i in range(n_assets):
         Xi = digitized[:, i]
         for j in range(i + 1, n_assets):
             Xj = digitized[:, j]
-            mi = fast_mi(Xi, Xj, bins)
-            Sigma[i, j] = mi
-            Sigma[j, i] = mi
+            m = mi(Xi, Xj, bins)
+            Sigma[i, j] = m
+            Sigma[j, i] = m
 
     return pd.DataFrame(Sigma, index=cols, columns=cols)
