@@ -41,10 +41,11 @@ class EntropyMIEstimator:
 class TFDC_Estimator:
     """TFDC matrix"""
 
-    def __init__(self, n_bins=20, reg=5e-3, p=2):
+    def __init__(self, n_bins=20, reg=5e-3, p=2, method="sinkhorn"):
         self.n_bins = n_bins
         self.reg = reg
         self.p = p
+        self.method = method
 
         # build target/forget copulas only once
         self.target_copulas, self.forget_copulas = build_standard_correlation_targets(
@@ -61,4 +62,5 @@ class TFDC_Estimator:
             n_bins=self.n_bins,
             reg=self.reg,
             p=self.p,
+            method=self.method,
         )

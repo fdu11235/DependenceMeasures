@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from typing import Literal
 from .utils import empirical_copula_transform, empirical_copula_hist, grid_cost_matrix
 
 try:
@@ -51,6 +52,35 @@ def sinkhorn_distance(
     return np.sqrt(cost) if use_sqrt else cost
 
 
+def wasserstein_distance(
+    a_hist: np.ndarray,
+    b_hist: np.ndarray,
+    M: np.ndarray | None = None,
+    p: int = 2,
+    use_sqrt: bool = True,
+) -> float:
+    """
+    Exact Wasserstein (EMD) distance between two histograms on the copula grid.
+    """
+    a = np.asarray(a_hist, dtype=np.float64).ravel()
+    b = np.asarray(b_hist, dtype=np.float64).ravel()
+
+    # no eps needed in theory, but you can keep a tiny one if you like
+    a /= a.sum()
+    b /= b.sum()
+
+    n_bins2 = a.size
+    if M is None:
+        n_bins = int(np.sqrt(n_bins2))
+        if n_bins * n_bins != n_bins2:
+            raise ValueError("Cannot infer n_bins from histogram size.")
+        M = grid_cost_matrix(n_bins, p=p)
+
+    cost = ot_backend.emd2(a, b, M)  # exact OT cost
+    cost = float(cost)
+    return np.sqrt(cost) if use_sqrt else cost
+
+
 def tfdc(
     copula_hist: np.ndarray,
     target_copulas: list[np.ndarray],
@@ -58,9 +88,25 @@ def tfdc(
     M: np.ndarray | None = None,
     reg: float = 1e-2,
     p: int = 2,
+    method: Literal["sinkhorn", "wasserstein"] = "sinkhorn",
 ) -> float:
     """
-    Target/Forget Dependence Coefficient as in Marti et al. (2016), Eq. (5).:contentReference[oaicite:2]{index=2}
+    Target/Forget Dependence Coefficient as in Marti et al. (2016), Eq. (5).
+
+    Parameters
+    ----------
+    copula_hist : ndarray
+        Empirical copula histogram of the pair (same shape as reference copulas).
+    target_copulas, forget_copulas : list of ndarray
+        Reference copulas (histograms).
+    M : ndarray or None
+        Ground cost matrix. If None, built from n_bins and p.
+    reg : float
+        Entropic regularization parameter (only used if method="sinkhorn").
+    p : int
+        Order of ground metric (for building M if None).
+    method : {"sinkhorn", "wasserstein"}
+        Which OT distance to use.
     """
     if not target_copulas:
         raise ValueError("target_copulas must be a non-empty list.")
@@ -75,14 +121,22 @@ def tfdc(
             raise ValueError("Cannot infer n_bins from copula histogram size.")
         M = grid_cost_matrix(n_bins, p=p)
 
-    d_forget = min(
-        sinkhorn_distance(copula_hist, C_minus, M=M, reg=reg, p=p)
-        for C_minus in forget_copulas
-    )
-    d_target = min(
-        sinkhorn_distance(copula_hist, C_plus, M=M, reg=reg, p=p)
-        for C_plus in target_copulas
-    )
+    # choose distance function
+    if method == "sinkhorn":
+
+        def dist(a, b):
+            return sinkhorn_distance(a, b, M=M, reg=reg, p=p)
+
+    elif method == "wasserstein":
+
+        def dist(a, b):
+            return wasserstein_distance(a, b, M=M, p=p)
+
+    else:
+        raise ValueError(f"Unknown OT method '{method}'")
+
+    d_forget = min(dist(copula_hist, C_minus) for C_minus in forget_copulas)
+    d_target = min(dist(copula_hist, C_plus) for C_plus in target_copulas)
 
     denom = d_forget + d_target
     if denom == 0.0:
@@ -98,6 +152,7 @@ def tfdc_matrix(
     n_bins: int = 20,
     reg: float = 1e-2,
     p: int = 2,
+    method: Literal["sinkhorn", "wasserstein"] = "sinkhorn",
 ):
     """
     Compute a TFDC-based dependence matrix for all columns of a DataFrame.
@@ -140,6 +195,7 @@ def tfdc_matrix(
                 M=M,
                 reg=reg,
                 p=p,
+                method=method,
             )
             mat[i, j] = mat[j, i] = val
 

@@ -21,7 +21,7 @@ def load_prices(path: str) -> pd.DataFrame:
     # falls es mehrere Zeilen mit dem gleichen Datum gibt → letzte nehmen
     df = df[~df.index.duplicated(keep="last")]
 
-    df = df.drop(columns=["AMRZ.S"], errors="ignore")
+    df = df.drop(columns=["AMRZ.S", "KNIN.S"], errors="ignore")
     return df
 
 

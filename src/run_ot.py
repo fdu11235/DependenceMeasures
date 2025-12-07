@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from typing import Literal
 
 from portfolio.utils import load_prices, compute_returns
 from portfolio.mean_variance import min_risk
@@ -15,6 +16,7 @@ def rolling_mean_tfdc(
     n_bins: int = 10,
     reg: float = 0.1,
     target_return: float | None = 0.0004,
+    method: Literal["sinkhorn", "wasserstein"] = "sinkhorn",
 ) -> pd.DataFrame:
     """
     Für jeden Rebalancing-Zeitpunkt (z.B. Monatsanfang) wird ein
@@ -84,6 +86,7 @@ def rolling_mean_tfdc(
             n_bins=n_bins,
             reg=reg,
             p=2,
+            method=method,
         )
         # Optional zum Debuggen:
         print(Sigma_df)
@@ -125,7 +128,8 @@ def main():
         lookback_years=1,
         n_bins=20,
         reg=5e-3,
-        target_return=0.0004,  # oder None, wenn du nur Risiko minimieren willst
+        target_return=0.0004,
+        method="wasserstein",
     )
 
     print("TFDC Min-Risk-Gewichte (1Y Lookback, Monatsanfang):")
