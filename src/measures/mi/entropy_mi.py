@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import entropy as shannon_entropy
 from .utils import digitize_returns, entropy, mi
 
 
@@ -53,7 +52,7 @@ def entropy_mi_matrix(
         Xi = digitized[:, i]
         for j in range(i + 1, n_assets):
             Xj = digitized[:, j]
-            m = mi(Xi, Xj, bins)
+            m = mi(Xi, Xj, n_states)
             Sigma[i, j] = m
             Sigma[j, i] = m
 

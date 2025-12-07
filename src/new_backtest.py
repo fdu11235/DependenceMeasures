@@ -174,7 +174,7 @@ def build_portfolio_and_benchmark_returns(
 
 def main():
     prices_path = "data/smi_prices_cleaned.xlsx"
-    weights_path = "mv_mi_weights_1y_2023_onwards.csv"
+    weights_path = "ot_weights.csv"
     smi_path = "data/smi.xlsx"
 
     prices = load_prices(prices_path)

@@ -1,26 +1,28 @@
-import pandas as pd
 import numpy as np
-from portfolio.mean_variance import min_risk
-from measures.mi.entropy_mi import entropy_mi_matrix
+import pandas as pd
+
 from portfolio.utils import load_prices, compute_returns
+from portfolio.mean_variance import min_risk
+
+from measures.ot.copulas import build_standard_correlation_targets
+from measures.ot.ot import tfdc_matrix
 
 
-def rolling_mean_entropy(
+def rolling_mean_tfdc(
     df_ret: pd.DataFrame,
-    start_year: int = 2023,
-    lookback_years: int = 1,
-    min_ret: float = -0.5,
-    max_ret: float = 0.5,
-    n_bins: int = 101,
-    target_return: float | None = 0.00038,
+    start_year: int = 2024,
+    lookback_years: int = 2,
+    n_bins: int = 10,
+    reg: float = 0.1,
+    target_return: float | None = 0.0004,
 ) -> pd.DataFrame:
     """
     Für jeden Rebalancing-Zeitpunkt (z.B. Monatsanfang) wird ein
-    Minimum-Risk-Portfolio berechnet, aber mit der Entropy+MI-Risiko-
-    matrix aus Novais et al. (2022) anstelle der Kovarianzmatrix.
+    Minimum-Risk-Portfolio berechnet, aber mit der TFDC-Abhängigkeits-
+    matrix (Optimal Transport auf Copulas) anstelle der Kovarianzmatrix.
 
     Nutzt:
-        - entropy_mi_matrix(window_ret, min_ret, max_ret, n_bins)
+        - tfdc_matrix(window_ret, target_copulas, forget_copulas, ...)
         - portfolio.mean_variance.min_risk(mu, Sigma, target_return, short_selling=False)
 
     Parameters
@@ -31,8 +33,10 @@ def rolling_mean_entropy(
         Ab welchem Jahr Rebalancing beginnen soll (z.B. 2023).
     lookback_years : int
         Anzahl Jahre für Lookback (hier 1).
-    min_ret, max_ret, n_bins :
-        Parameter für die Diskretisierung in entropy_mi_matrix.
+    n_bins : int
+        Anzahl Bins für das Copula-Gitter (z.B. 20 -> 20x20).
+    reg : float
+        Sinkhorn-Regularisierungsparameter für OT.
     target_return : float oder None
         Zielrendite für min_risk. Wenn None, wird reines Min-Risk ohne
         Renditeconstraint gemacht (abhängig von deiner min_risk-Implementierung).
@@ -51,8 +55,15 @@ def rolling_mean_entropy(
     rebal_dates = df_after_start.resample("MS").first().index
 
     tickers = df_ret.columns
-    weights_list = []
-    index_list = []
+    weights_list: list[np.ndarray] = []
+    index_list: list[pd.Timestamp] = []
+
+    # Target- und Forget-Copulas einmalig bauen (für alle Fenster gleich)
+    target_copulas, forget_copulas = build_standard_correlation_targets(
+        n_bins=n_bins,
+        n_samples=50_000,
+        random_state=42,
+    )
 
     for d in rebal_dates:
         # Lookback: 1 Jahr bis Tag vor Rebalancing
@@ -65,14 +76,18 @@ def rolling_mean_entropy(
         if len(window_ret) < 150:
             continue
 
-        # ---------- NEU: Entropy + Mutual Information Matrix ----------
-        Sigma_df = entropy_mi_matrix(
+        # ---------- NEU: TFDC-Abhängigkeitsmatrix ----------
+        Sigma_df = tfdc_matrix(
             window_ret,
-            min_ret=min_ret,
-            max_ret=max_ret,
+            target_copulas=target_copulas,
+            forget_copulas=forget_copulas,
             n_bins=n_bins,
+            reg=reg,
+            p=2,
         )
+        # Optional zum Debuggen:
         print(Sigma_df)
+
         Sigma = Sigma_df.to_numpy()
 
         # Erwartungswerte
@@ -103,22 +118,21 @@ def main():
     # 2) Returns berechnen
     df_ret = compute_returns(df_prices)
 
-    # 3) Rolling Min-Risk mit 1 Jahr Lookback ab 2023 (Entropy+MI-Matrix)
-    weights_df = rolling_mean_entropy(
+    # 3) Rolling Min-Risk mit 1 Jahr Lookback ab 2023 (TFDC-Matrix)
+    weights_df = rolling_mean_tfdc(
         df_ret,
         start_year=2023,
         lookback_years=1,
-        min_ret=-0.5,
-        max_ret=0.5,
-        n_bins=101,
+        n_bins=20,
+        reg=5e-3,
         target_return=0.0004,  # oder None, wenn du nur Risiko minimieren willst
     )
 
-    print("Entropy+MI Min-Risk-Gewichte (1Y Lookback, Monatsanfang):")
+    print("TFDC Min-Risk-Gewichte (1Y Lookback, Monatsanfang):")
     print(weights_df)
 
     # Optional: als CSV speichern
-    weights_df.to_csv("mi_weights.csv")
+    weights_df.to_csv("ot_weights.csv")
 
 
 if __name__ == "__main__":

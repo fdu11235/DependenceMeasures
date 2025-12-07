@@ -4,10 +4,7 @@ from scipy.stats import entropy as shannon_entropy
 
 
 def digitize_returns(
-    df_ret: pd.DataFrame,
-    min_ret: float = -0.5,
-    max_ret: float = 0.5,
-    n_bins: int = 101
+    df_ret: pd.DataFrame, min_ret: float = -0.5, max_ret: float = 0.5, n_bins: int = 101
 ):
     """
     Discretize continuous returns into bins (as in the paper: -50% to +50%, 101 bins).
@@ -37,31 +34,33 @@ def entropy(col: np.ndarray, n_states: int) -> float:
     return shannon_entropy(p, base=2)
 
 
-def mi(x: np.ndarray, y: np.ndarray, bins: np.ndarray) -> float:
+def mi(X: np.ndarray, Y: np.ndarray, n_states: int) -> float:
     """
-    Mutual Information I(X;Y) using a 2D histogram.
-
-    Parameters
-    ----------
-    x, y : integer-discretized variables
-    bins : histogram bin edges
-
-    Returns
-    -------
-    float : mutual information in bits
+    Mutual information of two *discrete* variables X, Y
+    whose values are in {0, ..., n_states-1}.
     """
-    joint, _, _ = np.histogram2d(x, y, bins=[bins, bins])
+    X = X.astype(int)
+    Y = Y.astype(int)
 
-    total = joint.sum()
-    if total == 0:
+    mask = (~np.isnan(X)) & (~np.isnan(Y))
+    X = X[mask]
+    Y = Y[mask]
+
+    # joint counts
+    joint = np.zeros((n_states, n_states), dtype=float)
+    for x, y in zip(X, Y):
+        if 0 <= x < n_states and 0 <= y < n_states:
+            joint[x, y] += 1
+
+    joint_sum = joint.sum()
+    if joint_sum == 0:
         return 0.0
+    joint /= joint_sum
 
-    joint_prob = joint / total
+    px = joint.sum(axis=1, keepdims=True)
+    py = joint.sum(axis=0, keepdims=True)
 
-    px = joint_prob.sum(axis=1, keepdims=True)
-    py = joint_prob.sum(axis=0, keepdims=True)
-
-    mask = joint_prob > 0
-    px_py = px @ py  # outer product
-
-    return np.sum(joint_prob[mask] * np.log2(joint_prob[mask] / px_py[mask]))
+    # avoid log(0)
+    mask = (joint > 0) & (px > 0) & (py > 0)
+    mi_val = np.sum(joint[mask] * np.log2(joint[mask] / (px * py)[mask]))
+    return float(mi_val)

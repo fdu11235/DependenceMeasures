@@ -211,3 +211,6 @@ src/data/smi_closing_prices.xlsx
 src/data/smi_market_cap.xlsx
 src/data/smi_prices_cleaned.xlsx
 src/data/smi.xlsx
+src/mi_weights.csv
+src/ot_weights.csv
+src/tfdc_matrix.csv
