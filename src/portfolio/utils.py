@@ -11,7 +11,7 @@ def load_prices(path: str) -> pd.DataFrame:
     df = df.set_index("Date").sort_index()
 
     # Problemspalte droppen (falls vorhanden)
-    df = df.drop(columns=["AMRZ.S"], errors="ignore")
+    df = df.drop(columns=["AMRZ.S", "ACLN.S", "SUNN.S", "GALD.S"], errors="ignore")
 
     return df
 

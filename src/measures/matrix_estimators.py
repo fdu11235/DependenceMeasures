@@ -4,7 +4,7 @@ import numpy as np
 
 from measures.mi.entropy_mi import entropy_mi_matrix
 from measures.ot.copulas import build_standard_correlation_targets
-from measures.ot.ot import tfdc_matrix
+from measures.ot.ot import tfdc_matrix, tfdc_matrix_parallel
 
 
 @runtime_checkable
@@ -41,7 +41,7 @@ class EntropyMIEstimator:
 class TFDC_Estimator:
     """TFDC matrix"""
 
-    def __init__(self, n_bins=20, reg=5e-3, p=2, method="sinkhorn"):
+    def __init__(self, n_bins=20, reg=5e-3, p=2, method="wasserstein"):
         self.n_bins = n_bins
         self.reg = reg
         self.p = p
@@ -55,7 +55,7 @@ class TFDC_Estimator:
         )
 
     def estimate(self, window_ret: pd.DataFrame) -> pd.DataFrame:
-        return tfdc_matrix(
+        return tfdc_matrix_parallel(
             window_ret,
             target_copulas=self.target_copulas,
             forget_copulas=self.forget_copulas,

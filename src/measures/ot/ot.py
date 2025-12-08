@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Literal
 from .utils import empirical_copula_transform, empirical_copula_hist, grid_cost_matrix
+from joblib import Parallel, delayed
 
 try:
     import ot as ot_backend  # POT: Python Optimal Transport
@@ -198,5 +199,119 @@ def tfdc_matrix(
                 method=method,
             )
             mat[i, j] = mat[j, i] = val
+
+    return pd.DataFrame(mat, index=cols, columns=cols)
+
+
+def _tfdc_pair(
+    i: int,
+    j: int,
+    u_i: np.ndarray,
+    u_j: np.ndarray,
+    n_bins: int,
+    M: np.ndarray,
+    target_copulas: list[np.ndarray],
+    forget_copulas: list[np.ndarray],
+    reg: float,
+    p: int,
+    method: str,
+) -> tuple[int, int, float]:
+    """
+    Helper to compute TFDC for one pair of assets (i, j).
+
+    Returns
+    -------
+    (i, j, value) : tuple
+        Indices and TFDC value.
+    """
+    H_ij = empirical_copula_hist(u_i, u_j, n_bins=n_bins)
+
+    val = tfdc(
+        H_ij,
+        target_copulas=target_copulas,
+        forget_copulas=forget_copulas,
+        M=M,
+        reg=reg,
+        p=p,
+        method=method,
+    )
+    return i, j, float(val)
+
+
+def tfdc_matrix_parallel(
+    df,
+    target_copulas: list[np.ndarray],
+    forget_copulas: list[np.ndarray],
+    n_bins: int = 20,
+    reg: float = 1e-2,
+    p: int = 2,
+    method: Literal["sinkhorn", "wasserstein"] = "sinkhorn",
+    n_jobs: int = -1,
+    verbose: int = 0,
+):
+    """
+    Compute a TFDC-based dependence matrix for all columns of a DataFrame,
+    using joblib to parallelise over asset pairs.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame, shape (T, N)
+        Return matrix.
+    target_copulas, forget_copulas : list of ndarray
+        Reference copulas for TFDC.
+    n_bins, reg, p : int or float
+        Histogram and OT parameters.
+    method : {"sinkhorn", "wasserstein"}
+        Which OT distance to use.
+    n_jobs : int
+        Number of parallel workers (joblib). -1 = use all cores.
+    verbose : int
+        Verbosity level for joblib (0 = silent).
+
+    Returns
+    -------
+    pandas.DataFrame, shape (N, N)
+        Symmetric TFDC dependence matrix.
+    """
+    n_assets = df.shape[1]
+    cols = list(df.columns)
+
+    # Ground cost matrix
+    M = grid_cost_matrix(n_bins, p=p)
+
+    # Precompute 1D copula transforms
+    U = {col: empirical_copula_transform(df[col].values) for col in cols}
+
+    # Build list of (i, j) pairs, including diagonal (i == j) to match tfdc_matrix behaviour
+    tasks: list[tuple[int, int, np.ndarray, np.ndarray]] = []
+    for i, col_i in enumerate(cols):
+        u_i = U[col_i]
+        for j, col_j in enumerate(cols[i:], start=i):
+            u_j = U[col_j]
+            tasks.append((i, j, u_i, u_j))
+
+    # Parallel computation over all pairs
+    results = Parallel(n_jobs=n_jobs, verbose=verbose)(
+        delayed(_tfdc_pair)(
+            i,
+            j,
+            u_i,
+            u_j,
+            n_bins,
+            M,
+            target_copulas,
+            forget_copulas,
+            reg,
+            p,
+            method,
+        )
+        for (i, j, u_i, u_j) in tasks
+    )
+
+    # Fill matrix
+    mat = np.zeros((n_assets, n_assets), dtype=float)
+    for i, j, val in results:
+        mat[i, j] = val
+        mat[j, i] = val  # symmetry
 
     return pd.DataFrame(mat, index=cols, columns=cols)
