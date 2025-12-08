@@ -1,6 +1,6 @@
 from portfolio.utils import load_prices, compute_returns
 from measures.risk_estimators import EntropyMIEstimator
-from portfolio.strategies import RollingMinRiskStrategy
+from portfolio.strategies import RollingMVStrategy
 from portfolio.backtest import PortfolioBacktester
 
 
@@ -8,7 +8,7 @@ def main():
     prices = load_prices("data/smi_prices_cleaned.xlsx")
     df_ret = compute_returns(prices)
 
-    strategy = RollingMinRiskStrategy(
+    strategy = RollingMVStrategy(
         risk_estimator=EntropyMIEstimator(),
         start_year=2023,
         lookback_years=1,

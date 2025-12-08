@@ -181,9 +181,9 @@ def tfdc_matrix(
     for i, col_i in enumerate(cols):
         u_i = U[col_i]
         for j, col_j in enumerate(cols[i:], start=i):
-            if i == j:
-                mat[i, j] = 1.0
-                continue
+            # if i == j:
+            # mat[i, j] = 1.0
+            # continue
 
             u_j = U[col_j]
             H_ij = empirical_copula_hist(u_i, u_j, n_bins=n_bins)

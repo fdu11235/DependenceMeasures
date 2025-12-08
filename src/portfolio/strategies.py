@@ -8,7 +8,7 @@ from portfolio.mean_variance import min_risk
 
 
 @dataclass
-class RollingMinRiskStrategy:
+class RollingMVStrategy:
     """
     Generic rolling-window mean-variance strategy.
     Uses a RiskEstimator to compute the risk matrix.
