@@ -37,27 +37,25 @@ def expand_weights_to_daily(
       - Before the first rebalancing date, the portfolio remains in cash
         (NaN weights indicate no positions).
     """
-    # Leeres Daily-DF mit allen Handelstagen
+    # initialize empty df
     w_daily = pd.DataFrame(index=price_index, columns=weights.columns, dtype=float)
 
-    # Für jedes Rebalancing-Datum den nächsten Handelstag suchen und dort die Weights setzen
+    # for every rebalance date find next trading date
     for date, row in weights.iterrows():
-        # alle Handelstage >= diesem Datum
         mask = price_index >= date
         if not mask.any():
-            continue  # falls Weight nach letztem Preisdatum liegt
+            continue
         trade_day = price_index[mask][0]
         w_daily.loc[trade_day] = row.values
 
-    # Ab erstem gesetzten Weight forward-fillen
+    # fill on first valid weight
     first_valid = w_daily.first_valid_index()
     if first_valid is None:
-        # keine Weights gesetzt -> alles Cash
         return w_daily
 
     w_daily.loc[first_valid:] = w_daily.loc[first_valid:].ffill()
 
-    # Nur Zeilen normalisieren, wo es überhaupt Gewichte gibt
+    # normalise
     mask = w_daily.notna().any(axis=1)
     row_sums = w_daily.loc[mask].sum(axis=1)
     w_daily.loc[mask] = w_daily.loc[mask].div(row_sums, axis=0)
@@ -79,7 +77,6 @@ def load_smi_benchmark(path: str, col_name: str | None = None) -> pd.Series:
     smi = df[col_name].astype(float)
     smi.name = "SMI"
 
-    # zur Sicherheit auch hier nochmal deduplizieren
     smi = smi[~smi.index.duplicated(keep="last")]
 
     return smi
@@ -111,18 +108,18 @@ def build_portfolio_and_benchmark_returns(
         start_date_candidate, first_price_date, first_weight_date, first_smi_date
     )
 
-    # alles auf Zeitraum ab start_date beschränken
+    # time horizon
     prices = prices.loc[start_date:]
     weights_df = weights_df.loc[start_date:]
     smi_series = smi_series.loc[start_date:]
 
-    # Asset Returns (ab Start)
+    # Asset Returns
     asset_ret = prices.pct_change().fillna(0.0)
 
-    # Weights auf tägliche Frequenz bringen (nur ab Startdate)
+    # expand weights to daily frequency
     weights_daily = expand_weights_to_daily(weights_df, prices.index)
 
-    # Safety: Shapes prüfen
+    # assert Shapes
     assert weights_daily.index.equals(asset_ret.index)
     assert (weights_daily.columns == asset_ret.columns).all()
 
@@ -135,7 +132,7 @@ def build_portfolio_and_benchmark_returns(
     bench_ret = smi_series.pct_change().fillna(0.0)
     bench_ret.name = "SMI_Benchmark"
 
-    # gemeinsamer Zeitraum (zur Sicherheit)
+    # common time horizon
     idx = port_ret.index.intersection(bench_ret.index)
     port_ret = port_ret.loc[idx]
     bench_ret = bench_ret.loc[idx]
