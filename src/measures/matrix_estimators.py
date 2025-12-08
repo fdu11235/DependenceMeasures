@@ -8,8 +8,8 @@ from measures.ot.ot import tfdc_matrix
 
 
 @runtime_checkable
-class RiskEstimator(Protocol):
-    """Any estimator that converts return windows into a risk matrix."""
+class DependenceMatrixEstimator(Protocol):
+    """Any estimator that converts return windows into a dependence matrix."""
 
     def estimate(self, window_ret: pd.DataFrame) -> pd.DataFrame: ...
 

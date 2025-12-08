@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 
-from measures.risk_estimators import RiskEstimator
+from measures.matrix_estimators import DependenceMatrixEstimator
 from portfolio.mean_variance import min_risk
 
 
@@ -11,10 +11,10 @@ from portfolio.mean_variance import min_risk
 class RollingMVStrategy:
     """
     Generic rolling-window mean-variance strategy.
-    Uses a RiskEstimator to compute the risk matrix.
+    Uses a dependence measure to compute the dependence matrix.
     """
 
-    risk_estimator: RiskEstimator
+    risk_estimator: DependenceMatrixEstimator
     start_year: int = 2023
     lookback_years: int = 1
     target_return: Optional[float] = 0.0004
