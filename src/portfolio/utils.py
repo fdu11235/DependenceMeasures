@@ -276,7 +276,7 @@ def build_portfolio_and_benchmark_returns_static(
     bench_ret = smi_aligned.pct_change().fillna(0.0)
     bench_ret.name = "SMI_Benchmark"
 
-    # Align both series defensively
+    # Align both series
     idx = port_ret.index.intersection(bench_ret.index)
     port_ret = port_ret.loc[idx]
     bench_ret = bench_ret.loc[idx]

@@ -12,10 +12,11 @@ def main():
         risk_estimator=EntropyMIEstimator(),
         start_year=2023,
         lookback_years=1,
+        target_return=None,
     )
 
     weights = strategy.compute_weights(df_ret)
-    weights.to_csv("ot_weights.csv")
+    weights.to_csv("mi_weights.csv")
 
     bt = PortfolioBacktester(
         prices_path="data/smi_prices_cleaned.xlsx",

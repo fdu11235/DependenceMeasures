@@ -12,6 +12,7 @@ def main():
         risk_estimator=TFDC_Estimator(),
         start_year=2023,
         lookback_years=1,
+        target_return=None,
     )
 
     weights = strategy.compute_weights(df_ret)
