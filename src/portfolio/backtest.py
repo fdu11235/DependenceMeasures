@@ -7,6 +7,7 @@ from portfolio.utils import (
     load_prices,
     load_smi_benchmark,
     build_portfolio_and_benchmark_returns,
+    build_portfolio_and_benchmark_returns_static,
 )
 
 
@@ -21,7 +22,7 @@ class PortfolioBacktester:
         smi = load_smi_benchmark(self.smi_path, col_name=None)
 
         # compute returns
-        port_ret, bench_ret = build_portfolio_and_benchmark_returns(
+        port_ret, bench_ret = build_portfolio_and_benchmark_returns_static(
             prices=prices,
             weights_df=weights_df,
             smi_series=smi,

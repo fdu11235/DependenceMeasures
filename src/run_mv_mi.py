@@ -5,11 +5,11 @@ from portfolio.backtest import PortfolioBacktester
 
 
 def main():
-    prices = load_prices("data/smi+smim_prices_cleaned.xlsx")
+    prices = load_prices("data/smi_prices_cleaned.xlsx")
     df_ret = compute_returns(prices)
 
     strategy = RollingMVStrategy(
-        risk_estimator=TFDC_Estimator(),
+        risk_estimator=EntropyMIEstimator(),
         start_year=2023,
         lookback_years=1,
     )
@@ -18,7 +18,7 @@ def main():
     weights.to_csv("ot_weights.csv")
 
     bt = PortfolioBacktester(
-        prices_path="data/smi+smim_prices_cleaned.xlsx",
+        prices_path="data/smi_prices_cleaned.xlsx",
         smi_path="data/smi.xlsx",
         start_year=2023,
     )

@@ -138,3 +138,147 @@ def build_portfolio_and_benchmark_returns(
     bench_ret = bench_ret.loc[idx]
 
     return port_ret, bench_ret
+
+
+def build_portfolio_and_benchmark_returns_static(
+    prices: pd.DataFrame,
+    weights_df: pd.DataFrame,
+    smi_series: pd.Series,
+    start_year: int = 2023,
+) -> tuple[pd.Series, pd.Series]:
+    """
+    Build daily portfolio and benchmark return series under constant-shares
+    between rebalancing dates.
+
+    Procedure:
+      - Align tickers between prices and weight data.
+      - Determine a common start date (not earlier than `start_year` and not
+        earlier than the first available price, weight or benchmark observation).
+      - Map each low-frequency weight vector (e.g. monthly) to a specific
+        trading day, which becomes a rebalancing day.
+      - Simulate the portfolio with:
+          * an initial wealth of 1.0,
+          * a constant number of shares in each asset between rebalancing days,
+          * new holdings computed only on rebalancing days from the chosen
+            weights and current portfolio value.
+      - Compute daily portfolio returns from changes in total portfolio value.
+      - Compute daily benchmark returns from the benchmark index.
+
+    This corresponds to a realistic monthly rebalancing scheme with
+    buy-and-hold behaviour between rebalancing dates.
+    """
+    # Restrict to tickers that are available both in prices and weights
+    common_cols = prices.columns.intersection(weights_df.columns)
+    prices = prices[common_cols]
+    weights_df = weights_df[common_cols]
+
+    # --- determine common start date ---
+    start_date_candidate = pd.Timestamp(f"{start_year}-01-01")
+    first_price_date = prices.index.min()
+    first_weight_date = weights_df.index.min()
+    first_smi_date = smi_series.index.min()
+
+    start_date = max(
+        start_date_candidate, first_price_date, first_weight_date, first_smi_date
+    )
+
+    # Restrict all series to the common time horizon
+    prices = prices.loc[start_date:]
+    weights_df = weights_df.loc[start_date:]
+    smi_series = smi_series.loc[start_date:]
+
+    # Ensure everything is sorted by date
+    prices = prices.sort_index()
+    weights_df = weights_df.sort_index()
+    smi_series = smi_series.sort_index()
+
+    price_index = prices.index
+    assets = prices.columns
+    n_assets = len(assets)
+
+    # --- map each weight date to the next available trading day ---
+    trade_days = []
+    trade_weights = []
+
+    for date, row in weights_df.iterrows():
+        mask = price_index >= date
+        if not mask.any():
+            continue
+        trade_day = price_index[mask][0]
+        trade_days.append(trade_day)
+        trade_weights.append(row)
+
+    if len(trade_days) == 0:
+        # No valid rebalancing dates in the horizon
+        # Return zero returns for both series
+        idx = price_index
+        port_ret = pd.Series(0.0, index=idx, name="MV_Portfolio")
+        smi_aligned = smi_series.reindex(idx).ffill()
+        bench_ret = smi_aligned.pct_change().fillna(0.0)
+        bench_ret.name = "SMI_Benchmark"
+        return port_ret, bench_ret
+
+    # Build DataFrame of mapped weights, group by trade day in case of duplicates
+    weights_mapped = pd.DataFrame(trade_weights, index=pd.DatetimeIndex(trade_days))
+    # if multiple rows map to same trade_day, keep the last one
+    weights_mapped = weights_mapped.groupby(level=0).last()
+    # normalise each weight vector to sum to 1
+    row_sums = weights_mapped.sum(axis=1)
+    weights_mapped = weights_mapped.div(row_sums, axis=0)
+
+    # Quick lookup if a day is a rebalance day, and its weights
+    rebalance_days = set(weights_mapped.index)
+
+    # --- simulate portfolio with constant shares between rebalancing dates ---
+    holdings = np.zeros(n_assets, dtype=float)  # number of shares per asset
+    V_prev = 1.0  # initial portfolio wealth
+    started = False  # becomes True once we have taken the first position
+
+    port_values = []
+    port_index = []
+
+    for t in price_index:
+        prices_t = prices.loc[t].values.astype(float)
+
+        if not started:
+            # Before first rebalancing: portfolio stays in cash
+            if t in rebalance_days:
+                # open initial position at this date using V_prev and current prices
+                w = weights_mapped.loc[t].reindex(assets).values.astype(float)
+                # avoid division by zero if any price is zero (very unlikely)
+                holdings = np.where(prices_t != 0, w * V_prev / prices_t, 0.0)
+                V_t = np.dot(holdings, prices_t)
+                # start the portfolio here, first return is defined as zero
+                started = True
+            else:
+                # still in cash
+                V_t = V_prev
+            r_t = 0.0
+        else:
+            # Portfolio already invested: value evolves with current holdings
+            V_t = np.dot(holdings, prices_t)
+            r_t = V_t / V_prev - 1.0 if V_prev != 0 else 0.0
+
+            # At rebalancing days, adjust holdings for next day using end-of-day wealth
+            if t in rebalance_days:
+                w = weights_mapped.loc[t].reindex(assets).values.astype(float)
+                holdings = np.where(prices_t != 0, w * V_t / prices_t, 0.0)
+
+        V_prev = V_t
+        port_values.append(r_t)
+        port_index.append(t)
+
+    port_ret = pd.Series(port_values, index=pd.DatetimeIndex(port_index))
+    port_ret.name = "MV_Portfolio"
+
+    # --- benchmark returns from SMI index ---
+    smi_aligned = smi_series.reindex(price_index).ffill()
+    bench_ret = smi_aligned.pct_change().fillna(0.0)
+    bench_ret.name = "SMI_Benchmark"
+
+    # Align both series defensively
+    idx = port_ret.index.intersection(bench_ret.index)
+    port_ret = port_ret.loc[idx]
+    bench_ret = bench_ret.loc[idx]
+
+    return port_ret, bench_ret
