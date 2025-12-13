@@ -63,6 +63,8 @@ class PortfolioBacktester:
             "max_dd_port": max_dd_port,
             "sharpe_bench": sharpe_bench,
             "max_dd_bench": max_dd_bench,
-            "port_ret": port_ret,
-            "bench_ret": bench_ret,
+            # "port_ret": port_ret,
+            # "bench_ret": bench_ret,
+            "cum_port": cum_p,
+            "cum_bench": cum_b,
         }

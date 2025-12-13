@@ -67,7 +67,7 @@ def min_risk(
     if target_return is not None:
         constraints.append(
             {
-                "type": "ineq",
+                "type": "eq",
                 "fun": lambda w: mu @ w - target_return,
             }
         )
@@ -91,73 +91,5 @@ def min_risk(
 
     if not res.success:
         raise RuntimeError(f"Optimization failed: {res.message}")
-
-    return _normalize_weights(res.x)
-
-
-def max_sharpe(
-    mu: np.ndarray,
-    Sigma: np.ndarray,
-    risk_free_rate: float = 0.0,
-    short_selling: bool = False,
-) -> np.ndarray:
-    """
-    Maximize Sharpe ratio:
-
-        max_w   ( (mu - rf)^T w / sqrt(w^T Σ w) )
-        s.t.    sum(w) = 1
-                w_i >= 0 if short_selling=False
-
-    We solve this by minimizing the negative Sharpe.
-
-    Parameters
-    ----------
-    mu : array (N,)
-        Expected returns.
-    Sigma : array (N x N)
-        Risk matrix.
-    risk_free_rate : float
-        Risk-free rate per period (same frequency as returns).
-    short_selling : bool
-        If False, enforce w_i >= 0.
-
-    Returns
-    -------
-    w_opt : np.ndarray (N,)
-        Optimal weights (sum to 1).
-    """
-    mu = np.asarray(mu)
-    Sigma = np.asarray(Sigma)
-    n = len(mu)
-
-    def neg_sharpe(w: np.ndarray) -> float:
-        var = float(w.T @ Sigma @ w)
-        if var <= 1e-16:
-            return 1e6  # super high penalty if variance ~ 0
-        vol = np.sqrt(var)
-        excess_ret = (mu - risk_free_rate) @ w
-        return -excess_ret / vol
-
-    constraints = [
-        {"type": "eq", "fun": lambda w: np.sum(w) - 1.0},
-    ]
-
-    if short_selling:
-        bounds = None
-    else:
-        bounds = [(0.0, 1.0) for _ in range(n)]
-
-    w0 = np.ones(n) / n
-
-    res = minimize(
-        neg_sharpe,
-        w0,
-        method="SLSQP",
-        bounds=bounds,
-        constraints=constraints,
-    )
-
-    if not res.success:
-        raise RuntimeError(f"Max Sharpe optimization failed: {res.message}")
 
     return _normalize_weights(res.x)

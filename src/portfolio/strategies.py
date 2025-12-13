@@ -11,35 +11,35 @@ from portfolio.risk_parity import equal_risk_contribution
 
 @dataclass
 class RollingMVStrategy:
-     """
-    Implements a rolling-window mean–variance portfolio strategy with 
+    """
+    Implements a rolling-window mean–variance portfolio strategy with
     a modular dependence (risk) estimator.
 
     The strategy proceeds as follows:
-      1. A user-specified dependence estimator (e.g. covariance, 
-         mutual information matrix, optimal transport matrix) is applied 
+      1. A user-specified dependence estimator (e.g. covariance,
+         mutual information matrix, optimal transport matrix) is applied
          to each rolling lookback window of returns.
-      2. At each rebalancing date (monthly by default), a one-year 
-         lookback window is constructed ending the day before the 
+      2. At each rebalancing date (monthly by default), a one-year
+         lookback window is constructed ending the day before the
          rebalance date.
-      3. If the window contains at least `min_obs` observations, the 
+      3. If the window contains at least `min_obs` observations, the
          dependence matrix Σ and expected returns μ are estimated.
-      4. A mean–variance optimization problem is solved via `min_risk` 
-         to obtain portfolio weights, with an optional target return and 
+      4. A mean–variance optimization problem is solved via `min_risk`
+         to obtain portfolio weights, with an optional target return and
          no short selling.
       5. The resulting weights are stored at monthly frequency.
 
     Parameters
     ----------
     risk_estimator : DependenceMatrixEstimator
-        Object providing an `.estimate(df_returns)` method that returns 
+        Object providing an `.estimate(df_returns)` method that returns
         a dependence (risk) matrix as a DataFrame.
     start_year : int, default 2023
         First calendar year considered for rebalancing.
     lookback_years : int, default 1
         Length of the rolling estimation window.
     target_return : float or None, default 0.0004
-        Target mean return in the mean–variance optimization. If None, 
+        Target mean return in the mean–variance optimization. If None,
         computes a minimum-variance portfolio.
     min_obs : int, default 150
         Minimum number of observations required in a lookback window.
@@ -47,7 +47,7 @@ class RollingMVStrategy:
     Returns
     -------
     pd.DataFrame
-        DataFrame of optimized portfolio weights indexed by rebalancing 
+        DataFrame of optimized portfolio weights indexed by rebalancing
         dates and with one column per asset.
     """
 
@@ -105,39 +105,39 @@ class RollingERCStrategy:
     strategy using a modular dependence (risk) estimator.
 
     The procedure is analogous to the rolling mean–variance approach,
-    but replaces the optimization step with an ERC allocation, where 
+    but replaces the optimization step with an ERC allocation, where
     each asset is constrained to contribute equally to total portfolio risk.
 
     Workflow:
-      1. A dependence estimator (e.g., covariance, entropy–MI matrix, 
-         OT-based dependence matrix) is applied to each rolling lookback 
+      1. A dependence estimator (e.g., covariance, entropy–MI matrix,
+         OT-based dependence matrix) is applied to each rolling lookback
          window of returns.
-      2. Rebalancing occurs at monthly frequency, using a one-year 
+      2. Rebalancing occurs at monthly frequency, using a one-year
          lookback window ending the day before the rebalancing date.
       3. If the window contains at least `min_obs` observations, the
          dependence matrix Σ is estimated.
       4. Portfolio weights are computed via `equal_risk_contribution`,
-         enforcing non-negativity (no short selling) and equal marginal 
+         enforcing non-negativity (no short selling) and equal marginal
          risk contributions across assets.
       5. The resulting weight vector is stored at monthly frequency.
 
     Parameters
     ----------
     risk_estimator : DependenceMatrixEstimator
-        Object providing an `.estimate(df_returns)` method that returns a 
+        Object providing an `.estimate(df_returns)` method that returns a
         dependence (risk) matrix as a DataFrame.
     start_year : int, default 2023
         First calendar year considered for rebalancing.
     lookback_years : int, default 1
         Length of the rolling estimation window.
     min_obs : int, default 150
-        Minimum number of observations required in the lookback window 
+        Minimum number of observations required in the lookback window
         before computing weights.
 
     Returns
     -------
     pd.DataFrame
-        DataFrame of ERC portfolio weights, indexed by rebalancing dates 
+        DataFrame of ERC portfolio weights, indexed by rebalancing dates
         and with one column per asset.
     """
 
