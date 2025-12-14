@@ -10,6 +10,43 @@ from portfolio.utils import (
     build_portfolio_and_benchmark_returns_static,
 )
 
+TRADING_DAYS = 252
+
+
+@dataclass
+class BacktestResult:
+    name: str
+    port_ret: pd.Series
+    bench_ret: pd.Series
+    cum_port: pd.Series
+    cum_bench: pd.Series
+    sharpe_port: float
+    sharpe_bench: float
+    max_dd_port: float
+    max_dd_bench: float
+
+    @property
+    def total_return_port(self) -> float:
+        return float(self.cum_port.iloc[-1] - 1.0)
+
+    @property
+    def total_return_bench(self) -> float:
+        return float(self.cum_bench.iloc[-1] - 1.0)
+
+    @property
+    def annualized_return_port(self) -> float:
+        n = int(self.port_ret.dropna().shape[0])
+        if n <= 0:
+            return float("nan")
+        return float(self.cum_port.iloc[-1] ** (TRADING_DAYS / n) - 1.0)
+
+    @property
+    def annualized_return_bench(self) -> float:
+        n = int(self.bench_ret.dropna().shape[0])
+        if n <= 0:
+            return float("nan")
+        return float(self.cum_bench.iloc[-1] ** (TRADING_DAYS / n) - 1.0)
+
 
 @dataclass
 class PortfolioBacktester:
@@ -17,11 +54,12 @@ class PortfolioBacktester:
     smi_path: str
     start_year: int = 2023
 
-    def run(self, weights_df: pd.DataFrame):
+    def compute(
+        self, weights_df: pd.DataFrame, name: str = "Strategy"
+    ) -> BacktestResult:
         prices = load_prices(self.prices_path)
         smi = load_smi_benchmark(self.smi_path, col_name=None)
 
-        # compute returns
         port_ret, bench_ret = build_portfolio_and_benchmark_returns_static(
             prices=prices,
             weights_df=weights_df,
@@ -29,42 +67,31 @@ class PortfolioBacktester:
             start_year=self.start_year,
         )
 
-        # stats
         sharpe_port = (
-            port_ret.mean() / port_ret.std() * np.sqrt(252)
+            (port_ret.mean() / port_ret.std() * np.sqrt(252))
             if port_ret.std() > 0
             else np.nan
         )
         sharpe_bench = (
-            bench_ret.mean() / bench_ret.std() * np.sqrt(252)
+            (bench_ret.mean() / bench_ret.std() * np.sqrt(252))
             if bench_ret.std() > 0
             else np.nan
         )
 
         cum_p = (1 + port_ret).cumprod()
-        running_max_p = cum_p.cummax()
-        max_dd_port = (cum_p / running_max_p - 1).min()
+        max_dd_port = (cum_p / cum_p.cummax() - 1).min()
 
         cum_b = (1 + bench_ret).cumprod()
-        running_max_b = cum_b.cummax()
-        max_dd_bench = (cum_b / running_max_b - 1).min()
+        max_dd_bench = (cum_b / cum_b.cummax() - 1).min()
 
-        # plot
-        plt.figure(figsize=(12, 6))
-        cum_p.plot(label="Strategy")
-        cum_b.plot(label="SMI Benchmark")
-        plt.title("Cumulative Returns")
-        plt.grid(True)
-        plt.legend()
-        plt.show()
-
-        return {
-            "sharpe_port": sharpe_port,
-            "max_dd_port": max_dd_port,
-            "sharpe_bench": sharpe_bench,
-            "max_dd_bench": max_dd_bench,
-            # "port_ret": port_ret,
-            # "bench_ret": bench_ret,
-            "cum_port": cum_p,
-            "cum_bench": cum_b,
-        }
+        return BacktestResult(
+            name=name,
+            port_ret=port_ret,
+            bench_ret=bench_ret,
+            cum_port=cum_p,
+            cum_bench=cum_b,
+            sharpe_port=sharpe_port,
+            sharpe_bench=sharpe_bench,
+            max_dd_port=max_dd_port,
+            max_dd_bench=max_dd_bench,
+        )
