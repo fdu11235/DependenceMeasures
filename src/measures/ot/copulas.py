@@ -58,7 +58,7 @@ def build_standard_correlation_targets(
     Reference sets reproducing the paper's 'standard correlation' example.
 
     Forget set: independence copula.
-    Target set: Frechet–Hoeffding bounds (approx positive & negative).:contentReference[oaicite:1]{index=1}
+    Target set: Frechet–Hoeffding bounds (approx positive & negative).
 
     Returns
     -------
