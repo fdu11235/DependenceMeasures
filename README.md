@@ -1,9 +1,6 @@
 # DependenceMeasures
 Research on alternative dependence measures for portfolio construction AREP HS25
 
-# DependenceMeasures
-Research on alternative dependence measures for portfolio construction (AREP HS25)
-
 ## Running the experiments
 
 To reproduce the portfolio construction and backtesting results, run one of the following scripts:
