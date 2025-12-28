@@ -79,7 +79,7 @@ def main():
     plot_cumulative(
         results,
         benchmark_label="SMI",
-        save_path="output/MV_smi_expanded_results.pdf",
+        save_path="output/MV_smi_results.pdf",
     )
 
     summary = build_summary_table(results, "SMI")
