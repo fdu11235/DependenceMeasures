@@ -9,6 +9,14 @@ def _normalize_weights(w: np.ndarray) -> np.ndarray:
     return w / s
 
 
+# Objective: squared distance of RCs to their mean
+def objective(w: np.ndarray, Sigma) -> float:
+    w = np.asarray(w)
+    rc = risk_contributions(w, Sigma)
+    avg_rc = rc.mean()
+    return float(((rc - avg_rc) ** 2).sum())
+
+
 def risk_contributions(w: np.ndarray, Sigma: np.ndarray) -> np.ndarray:
     """
     Compute risk contributions of each asset:
@@ -60,28 +68,29 @@ def equal_risk_contribution(
     w_opt : np.ndarray (N,)
         ERC weights (sum to 1).
     """
-    Sigma = np.asarray(Sigma)
+    Sigma = np.asarray(Sigma, dtype=float)
+
+    if Sigma.ndim != 2 or Sigma.shape[0] != Sigma.shape[1]:
+        raise ValueError(f"Sigma must be square (N x N). Got shape {Sigma.shape}.")
+
+    # enforce symmetry (helps numerics)
+    Sigma = 0.5 * (Sigma + Sigma.T)
+
     n = Sigma.shape[0]
 
-    # Objective: squared distance of RCs to their mean
     def objective(w: np.ndarray) -> float:
-        w = np.asarray(w)
         rc = risk_contributions(w, Sigma)
-        avg_rc = rc.mean()
-        return float(((rc - avg_rc) ** 2).sum())
 
-    # Constraint: sum(w) = 1
-    constraints = [
-        {"type": "eq", "fun": lambda w: np.sum(w) - 1.0},
-    ]
+        rc_sum = float(np.sum(rc))
+        if rc_sum <= 0 or not np.isfinite(rc_sum):
+            return 1e6  # penalty to keep optimizer away from bad points
 
-    # Bounds
-    if short_selling:
-        bounds = None  # weights können negativ sein
-    else:
-        bounds = [(0.0, 1.0) for _ in range(n)]
+        rc_share = rc / rc_sum  # normalize contributions
+        target = 1.0 / n
+        return float(np.sum((rc_share - target) ** 2))
 
-    # Start: Gleichgewichtete Gewichte
+    constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}]
+    bounds = None if short_selling else [(0.0, 1.0)] * n
     w0 = np.ones(n) / n
 
     res = minimize(
@@ -90,9 +99,21 @@ def equal_risk_contribution(
         method="SLSQP",
         bounds=bounds,
         constraints=constraints,
+        options={"maxiter": 2000, "ftol": 1e-15, "disp": False},
     )
 
     if not res.success:
         raise RuntimeError(f"ERC optimization failed: {res.message}")
 
-    return _normalize_weights(res.x)
+    w_raw = res.x
+    w = w_raw / w_raw.sum()
+
+    rc = risk_contributions(w, Sigma)
+    rc_share = rc / rc.sum()
+
+    print("ERC check:")
+    print("RC share std:", rc_share.std())
+    print("RC share min/max:", rc_share.min(), rc_share.max())
+
+    # -----------------------
+    return w

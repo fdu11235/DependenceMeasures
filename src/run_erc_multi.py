@@ -18,12 +18,12 @@ from portfolio.backtest import PortfolioBacktester
 
 
 def main():
-    prices = load_prices("data/smi_prices_cleaned.xlsx")
+    prices = load_prices("data/smi+smim_prices_cleaned.xlsx")
     df_ret = compute_returns(prices)
 
     bt = PortfolioBacktester(
-        prices_path="data/smi_prices_cleaned.xlsx",
-        benchmark_path="data/smi.xlsx",
+        prices_path="data/smi+smim_prices_cleaned.xlsx",
+        benchmark_path="data/smi_expanded.xlsx",
         start_year=2023,
     )
 
@@ -69,18 +69,20 @@ def main():
     results = []
     for name, strat in strategies:
         w = strat.compute_weights(df_ret)
+        fname = name.lower().replace(" ", "_")
+        w.to_csv(f"output/erc/weights_{fname}.csv", index_label="date")
         results.append(bt.compute(w, name=name))
 
     plot_cumulative(
         results,
-        benchmark_label="SMI",
-        save_path="output/ERC_smi_results.pdf",
+        benchmark_label="SMI Expanded",
+        save_path="output/ERC_smi_Expanded_results.pdf",
     )
 
     summary = build_summary_table(results, "SMI")
     summary_fmt = format_summary_table(summary)
     print(summary_fmt)
-    summary_fmt.to_excel("output/ERC_smi_summary_table.xlsx")
+    summary_fmt.to_excel("output/ERC_smi_expanded_summary_table.xlsx")
 
 
 if __name__ == "__main__":

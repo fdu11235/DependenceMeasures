@@ -5,8 +5,11 @@ from typing import Optional
 from tqdm import tqdm
 
 from measures.matrix_estimators import DependenceMatrixEstimator
-from portfolio.mean_variance import min_risk
-from portfolio.risk_parity import equal_risk_contribution
+from portfolio.mean_variance import min_risk, min_risk_cvxopt
+from portfolio.equal_risk_contribution import (
+    equal_risk_contribution,
+    risk_contributions,
+)
 
 
 def _normalize_weights(w: np.ndarray) -> np.ndarray:
@@ -87,14 +90,14 @@ class RollingMVStrategy:
             Sigma_df = self.risk_estimator.estimate(window_ret)
             Sigma = Sigma_df.to_numpy()
             mu = window_ret.mean().to_numpy()
+            # print(mu)
+            # self.target_return = mu.mean()
 
-            w = min_risk(
+            w = min_risk_cvxopt(
                 mu,
                 Sigma,
                 target_return=self.target_return,
-                short_selling=False,
             )
-
             weights_list.append(w)
             index_list.append(d)
 
@@ -296,12 +299,17 @@ class RollingERCStrategy:
                 continue
 
             Sigma_df = self.risk_estimator.estimate(window_ret)
+            print(Sigma_df)
             Sigma = Sigma_df.to_numpy()
 
             w = equal_risk_contribution(
                 Sigma,
                 short_selling=False,
             )
+            rc = risk_contributions(w, Sigma)
+
+            print("RC std / mean:", rc.std() / rc.mean())
+            print("Weights std:", w.std())
 
             weights_list.append(w)
             index_list.append(d)

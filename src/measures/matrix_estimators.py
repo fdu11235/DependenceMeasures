@@ -45,7 +45,7 @@ class EntropyMIEstimator:
         )
 
 
-class TFDC_Estimator:
+class TFDCEstimator:
     """TFDC matrix"""
 
     def __init__(self, n_bins=20, reg=5e-3, p=2, method="wasserstein"):

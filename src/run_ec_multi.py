@@ -9,7 +9,7 @@ from portfolio.utils import (
 )
 from measures.matrix_estimators import (
     EntropyMIEstimator,
-    TFDC_Estimator,
+    TFDCEstimator,
     CovarianceEstimator,
     SpearmanEstimator,
 )
@@ -42,7 +42,7 @@ def main():
         (
             "TFDC",
             RollingEqualCorrelationStrategy(
-                TFDC_Estimator(),
+                TFDCEstimator(),
                 start_year=2023,
                 lookback_years=1,
             ),
@@ -72,6 +72,8 @@ def main():
     results = []
     for name, strat in strategies:
         w = strat.compute_weights(df_ret)
+        fname = name.lower().replace(" ", "_")
+        w.to_csv(f"output/ec/weights_{fname}.csv", index_label="date")
         results.append(bt.compute(w, name=name))
 
     plot_cumulative(
