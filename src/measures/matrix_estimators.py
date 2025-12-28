@@ -21,7 +21,7 @@ class SpearmanEstimator:
         return spearman_covariance(window_ret)
 
 
-class CovariancEstimator:
+class CovarianceEstimator:
     """Standard sample covariance matrix."""
 
     def estimate(self, window_ret: pd.DataFrame) -> pd.DataFrame:
