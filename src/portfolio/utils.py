@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def load_prices(path: str) -> pd.DataFrame:
@@ -9,10 +10,9 @@ def load_prices(path: str) -> pd.DataFrame:
     df = pd.read_excel(path)
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.set_index("Date").sort_index()
-
-    # Problemspalte droppen (falls vorhanden)
-    df = df.drop(columns=["AMRZ.S", "ACLN.S", "SUNN.S", "GALD.S"], errors="ignore")
-
+    df = df.drop(
+        columns=["AMRZ.S", "ACLN.S", "SUNN.S", "SDZ.S", "GALD.S"], errors="ignore"
+    )
     return df
 
 
@@ -63,10 +63,7 @@ def expand_weights_to_daily(
     return w_daily
 
 
-def load_smi_benchmark(path: str, col_name: str | None = None) -> pd.Series:
-    """
-    Load SMI dataset
-    """
+def load_benchmark(path: str, col_name: str | None = None) -> pd.Series:
     df = pd.read_excel(path)
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.set_index("Date").sort_index()
@@ -74,76 +71,18 @@ def load_smi_benchmark(path: str, col_name: str | None = None) -> pd.Series:
     if col_name is None:
         col_name = df.columns[0]
 
-    smi = df[col_name].astype(float)
-    smi.name = "SMI"
+    benchmark = df[col_name].astype(float)
+    benchmark.name = col_name
 
-    smi = smi[~smi.index.duplicated(keep="last")]
+    benchmark = benchmark[~benchmark.index.duplicated(keep="last")]
 
-    return smi
-
-
-def build_portfolio_and_benchmark_returns(
-    prices: pd.DataFrame,
-    weights_df: pd.DataFrame,
-    smi_series: pd.Series,
-    start_year: int = 2023,
-) -> tuple[pd.Series, pd.Series]:
-    """
-    Returns tuple:
-      - port_ret: weighted portfolio returns
-      - bench_ret: daily benchmark returns
-    """
-    # common tickers
-    common_cols = prices.columns.intersection(weights_df.columns)
-    prices = prices[common_cols]
-    weights_df = weights_df[common_cols]
-
-    # --- start date ---
-    start_date_candidate = pd.Timestamp(f"{start_year}-01-01")
-    first_price_date = prices.index.min()
-    first_weight_date = weights_df.index.min()
-    first_smi_date = smi_series.index.min()
-
-    start_date = max(
-        start_date_candidate, first_price_date, first_weight_date, first_smi_date
-    )
-
-    # time horizon
-    prices = prices.loc[start_date:]
-    weights_df = weights_df.loc[start_date:]
-    smi_series = smi_series.loc[start_date:]
-
-    # Asset Returns
-    asset_ret = prices.pct_change().fillna(0.0)
-
-    # expand weights to daily frequency
-    weights_daily = expand_weights_to_daily(weights_df, prices.index)
-
-    # assert Shapes
-    assert weights_daily.index.equals(asset_ret.index)
-    assert (weights_daily.columns == asset_ret.columns).all()
-
-    # Portfolio-Return
-    port_ret = (weights_daily * asset_ret).sum(axis=1)
-    port_ret.name = "MV_Portfolio"
-
-    # Benchmark-Returns
-    smi_series = smi_series.reindex(prices.index).ffill()
-    bench_ret = smi_series.pct_change().fillna(0.0)
-    bench_ret.name = "SMI_Benchmark"
-
-    # common time horizon
-    idx = port_ret.index.intersection(bench_ret.index)
-    port_ret = port_ret.loc[idx]
-    bench_ret = bench_ret.loc[idx]
-
-    return port_ret, bench_ret
+    return benchmark
 
 
 def build_portfolio_and_benchmark_returns_static(
     prices: pd.DataFrame,
     weights_df: pd.DataFrame,
-    smi_series: pd.Series,
+    benchmark_series: pd.Series,
     start_year: int = 2023,
 ) -> tuple[pd.Series, pd.Series]:
     """
@@ -176,21 +115,21 @@ def build_portfolio_and_benchmark_returns_static(
     start_date_candidate = pd.Timestamp(f"{start_year}-01-01")
     first_price_date = prices.index.min()
     first_weight_date = weights_df.index.min()
-    first_smi_date = smi_series.index.min()
+    first_benchmark_date = benchmark_series.index.min()
 
     start_date = max(
-        start_date_candidate, first_price_date, first_weight_date, first_smi_date
+        start_date_candidate, first_price_date, first_weight_date, first_benchmark_date
     )
 
     # Restrict all series to the common time horizon
     prices = prices.loc[start_date:]
     weights_df = weights_df.loc[start_date:]
-    smi_series = smi_series.loc[start_date:]
+    benchmark_series = benchmark_series.loc[start_date:]
 
     # Ensure everything is sorted by date
     prices = prices.sort_index()
     weights_df = weights_df.sort_index()
-    smi_series = smi_series.sort_index()
+    benchmark_series = benchmark_series.sort_index()
 
     price_index = prices.index
     assets = prices.columns
@@ -213,9 +152,9 @@ def build_portfolio_and_benchmark_returns_static(
         # Return zero returns for both series
         idx = price_index
         port_ret = pd.Series(0.0, index=idx, name="MV_Portfolio")
-        smi_aligned = smi_series.reindex(idx).ffill()
-        bench_ret = smi_aligned.pct_change().fillna(0.0)
-        bench_ret.name = "SMI_Benchmark"
+        benchmark_aligned = benchmark_series.reindex(idx).ffill()
+        bench_ret = benchmark_aligned.pct_change().fillna(0.0)
+        bench_ret.name = "Benchmark"
         return port_ret, bench_ret
 
     # Build DataFrame of mapped weights, group by trade day in case of duplicates
@@ -239,7 +178,6 @@ def build_portfolio_and_benchmark_returns_static(
 
     for t in price_index:
         prices_t = prices.loc[t].values.astype(float)
-
         if not started:
             # Before first rebalancing: portfolio stays in cash
             if t in rebalance_days:
@@ -258,7 +196,6 @@ def build_portfolio_and_benchmark_returns_static(
             # Portfolio already invested: value evolves with current holdings
             V_t = np.dot(holdings, prices_t)
             r_t = V_t / V_prev - 1.0 if V_prev != 0 else 0.0
-
             # At rebalancing days, adjust holdings for next day using end-of-day wealth
             if t in rebalance_days:
                 w = weights_mapped.loc[t].reindex(assets).values.astype(float)
@@ -271,10 +208,10 @@ def build_portfolio_and_benchmark_returns_static(
     port_ret = pd.Series(port_values, index=pd.DatetimeIndex(port_index))
     port_ret.name = "MV_Portfolio"
 
-    # --- benchmark returns from SMI index ---
-    smi_aligned = smi_series.reindex(price_index).ffill()
-    bench_ret = smi_aligned.pct_change().fillna(0.0)
-    bench_ret.name = "SMI_Benchmark"
+    # --- benchmark returns from index ---
+    benchmark_aligned = benchmark_series.reindex(price_index).ffill()
+    bench_ret = benchmark_aligned.pct_change().fillna(0.0)
+    bench_ret.name = "Index Benchmark"
 
     # Align both series
     idx = port_ret.index.intersection(bench_ret.index)
@@ -282,3 +219,93 @@ def build_portfolio_and_benchmark_returns_static(
     bench_ret = bench_ret.loc[idx]
 
     return port_ret, bench_ret
+
+
+def plot_cumulative(
+    results,
+    benchmark_label: str,
+    save_path: str | None = None,
+):
+    with plt.style.context("seaborn-v0_8-darkgrid"):
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        for r in results:
+            r.cum_port.plot(ax=ax, label=r.name)
+
+        if results:
+            results[0].cum_bench.plot(
+                ax=ax,
+                label=benchmark_label,
+                linewidth=2,
+            )
+
+        ax.set_title("Cumulative Returns")
+        ax.set_ylabel("Portfolio Value (Normalized)")
+        ax.legend()
+        fig.tight_layout()
+
+        if save_path is not None:
+            fig.savefig(save_path, dpi=300, bbox_inches="tight")
+
+        plt.show()
+
+
+def build_summary_table(results: list, benchmark) -> pd.DataFrame:
+    """
+    Build a comparison table for strategies + one benchmark row.
+
+    Expects each result to expose:
+      - name
+      - total_return_port, annualized_return_port, sharpe_port, max_dd_port
+      - total_return_bench, annualized_return_bench, sharpe_bench, max_dd_bench
+    """
+    if not results:
+        return pd.DataFrame(
+            columns=["Total Return", "Ann. Return", "Sharpe", "Max Drawdown"]
+        )
+
+    rows = []
+
+    # strategies
+    for r in results:
+        rows.append(
+            {
+                "Name": r.name,
+                "Total Return": r.total_return_port,
+                "Ann. Return": r.annualized_return_port,
+                "Sharpe": r.sharpe_port,
+                "Max Drawdown": r.max_dd_port,
+            }
+        )
+
+    # benchmark once
+    b = results[0]
+    rows.append(
+        {
+            "Name": benchmark,
+            "Total Return": b.total_return_bench,
+            "Ann. Return": b.annualized_return_bench,
+            "Sharpe": b.sharpe_bench,
+            "Max Drawdown": b.max_dd_bench,
+        }
+    )
+
+    return pd.DataFrame(rows).set_index("Name")
+
+
+def format_summary_table(summary: pd.DataFrame) -> pd.DataFrame:
+    if summary.empty:
+        return summary
+
+    out = summary.copy()
+    out["Total Return"] = out["Total Return"].map(
+        lambda x: f"{x:.2%}" if np.isfinite(x) else "nan"
+    )
+    out["Ann. Return"] = out["Ann. Return"].map(
+        lambda x: f"{x:.2%}" if np.isfinite(x) else "nan"
+    )
+    out["Max Drawdown"] = out["Max Drawdown"].map(
+        lambda x: f"{x:.2%}" if np.isfinite(x) else "nan"
+    )
+    out["Sharpe"] = out["Sharpe"].map(lambda x: f"{x:.2f}" if np.isfinite(x) else "nan")
+    return out

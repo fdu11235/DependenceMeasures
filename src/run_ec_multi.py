@@ -1,3 +1,5 @@
+import pandas as pd
+import numpy as np
 from portfolio.utils import (
     load_prices,
     compute_returns,
@@ -12,9 +14,8 @@ from measures.matrix_estimators import (
     SpearmanEstimator,
 )
 from portfolio.strategies import (
-    RollingMVStrategy,
-    RollingEqualWeightStrategy,
     RollingEqualCorrelationStrategy,
+    RollingEqualWeightStrategy,
 )
 from portfolio.backtest import PortfolioBacktester
 
@@ -32,38 +33,34 @@ def main():
     strategies = [
         (
             "Mutual Information",
-            RollingMVStrategy(
+            RollingEqualCorrelationStrategy(
                 EntropyMIEstimator(),
                 start_year=2023,
                 lookback_years=1,
-                target_return=None,
             ),
         ),
         (
-            "MTFDC",
-            RollingMVStrategy(
+            "TFDC",
+            RollingEqualCorrelationStrategy(
                 TFDC_Estimator(),
                 start_year=2023,
                 lookback_years=1,
-                target_return=None,
             ),
         ),
         (
             "Pearson",
-            RollingMVStrategy(
+            RollingEqualCorrelationStrategy(
                 CovarianceEstimator(),
                 start_year=2023,
                 lookback_years=1,
-                target_return=None,
             ),
         ),
         (
             "Spearman",
-            RollingMVStrategy(
+            RollingEqualCorrelationStrategy(
                 SpearmanEstimator(),
                 start_year=2023,
                 lookback_years=1,
-                target_return=None,
             ),
         ),
         (
@@ -76,16 +73,17 @@ def main():
     for name, strat in strategies:
         w = strat.compute_weights(df_ret)
         results.append(bt.compute(w, name=name))
+
     plot_cumulative(
         results,
         benchmark_label="SMI",
-        save_path="output/MV_smi_expanded_results.pdf",
+        save_path="output/EC_smi_results.pdf",
     )
 
     summary = build_summary_table(results, "SMI")
     summary_fmt = format_summary_table(summary)
     print(summary_fmt)
-    summary_fmt.to_excel("output/MV_smi_summary_table.xlsx")
+    summary_fmt.to_excel("output/EC_smi_summary_table.xlsx")
 
 
 if __name__ == "__main__":

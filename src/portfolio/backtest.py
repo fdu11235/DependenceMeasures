@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 
 from portfolio.utils import (
     load_prices,
-    load_smi_benchmark,
-    build_portfolio_and_benchmark_returns,
+    load_benchmark,
     build_portfolio_and_benchmark_returns_static,
 )
 
@@ -51,19 +50,19 @@ class BacktestResult:
 @dataclass
 class PortfolioBacktester:
     prices_path: str
-    smi_path: str
+    benchmark_path: str
     start_year: int = 2023
 
     def compute(
         self, weights_df: pd.DataFrame, name: str = "Strategy"
     ) -> BacktestResult:
         prices = load_prices(self.prices_path)
-        smi = load_smi_benchmark(self.smi_path, col_name=None)
+        benchmark = load_benchmark(self.benchmark_path, col_name=None)
 
         port_ret, bench_ret = build_portfolio_and_benchmark_returns_static(
             prices=prices,
             weights_df=weights_df,
-            smi_series=smi,
+            benchmark_series=benchmark,
             start_year=self.start_year,
         )
 
