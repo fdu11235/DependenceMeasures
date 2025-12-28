@@ -40,7 +40,7 @@ def main():
             ),
         ),
         (
-            "MTFDC",
+            "TFDC",
             RollingMVStrategy(
                 TFDC_Estimator(),
                 start_year=2023,

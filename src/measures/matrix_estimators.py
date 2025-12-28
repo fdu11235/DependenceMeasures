@@ -1,7 +1,7 @@
 from typing import Protocol, runtime_checkable
 import pandas as pd
 import numpy as np
-from measures.covariance.spearman import spearman_covariance
+from measures.covariance.covariance import spearman_covariance, pearson_covariance
 from measures.mi.entropy_mi import entropy_mi_matrix
 from measures.ot.copulas import build_standard_correlation_targets
 from measures.ot.ot import tfdc_matrix, tfdc_matrix_parallel
@@ -15,17 +15,17 @@ class DependenceMatrixEstimator(Protocol):
 
 
 class SpearmanEstimator:
-    """Standard sample covariance matrix."""
+    """Spearman covariance matrix."""
 
     def estimate(self, window_ret: pd.DataFrame) -> pd.DataFrame:
         return spearman_covariance(window_ret)
 
 
 class CovarianceEstimator:
-    """Standard sample covariance matrix."""
+    """Pearson covariance matrix."""
 
     def estimate(self, window_ret: pd.DataFrame) -> pd.DataFrame:
-        return window_ret.cov()
+        return pearson_covariance(window_ret)
 
 
 class EntropyMIEstimator:
