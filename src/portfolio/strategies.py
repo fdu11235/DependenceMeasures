@@ -64,7 +64,7 @@ class RollingMVStrategy:
     risk_estimator: DependenceMatrixEstimator
     start_year: int = 2023
     lookback_years: int = 1
-    target_return: Optional[float] = 0.0004
+    use_auto_target: bool = False
     min_obs: int = 150  # minimum window size
 
     def compute_weights(self, df_ret: pd.DataFrame) -> pd.DataFrame:
@@ -90,13 +90,18 @@ class RollingMVStrategy:
             Sigma_df = self.risk_estimator.estimate(window_ret)
             Sigma = Sigma_df.to_numpy()
             mu = window_ret.mean().to_numpy()
-            # print(mu)
-            # self.target_return = mu.mean()
+
+            if self.use_auto_target:
+                # daily target return = cross-sectional mean daily return in window
+                target_return = window_ret.mean(axis=0).mean()
+                print(target_return)
+            else:
+                target_return = None
 
             w = min_risk_cvxopt(
                 mu,
                 Sigma,
-                target_return=self.target_return,
+                target_return=target_return,
             )
             weights_list.append(w)
             index_list.append(d)
