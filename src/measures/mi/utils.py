@@ -32,7 +32,7 @@ def entropy(col: np.ndarray, n_states: int) -> float:
     """
     counts = np.bincount(col, minlength=n_states)
     p = counts / counts.sum()
-    return shannon_entropy(p, base=2)
+    return shannon_entropy(p)
 
 
 def mi(X: np.ndarray, Y: np.ndarray, n_states: int) -> float:

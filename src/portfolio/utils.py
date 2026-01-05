@@ -261,7 +261,13 @@ def build_summary_table(results: list, benchmark) -> pd.DataFrame:
     """
     if not results:
         return pd.DataFrame(
-            columns=["Total Return", "Ann. Return", "Sharpe", "Max Drawdown"]
+            columns=[
+                "Total Return",
+                "Ann. Return",
+                "Std. (ann.)",
+                "Sharpe",
+                "Max Drawdown",
+            ]
         )
 
     rows = []
@@ -273,6 +279,7 @@ def build_summary_table(results: list, benchmark) -> pd.DataFrame:
                 "Name": r.name,
                 "Total Return": r.total_return_port,
                 "Ann. Return": r.annualized_return_port,
+                "Std. (ann.)": r.std_port,
                 "Sharpe": r.sharpe_port,
                 "Max Drawdown": r.max_dd_port,
             }
@@ -285,6 +292,7 @@ def build_summary_table(results: list, benchmark) -> pd.DataFrame:
             "Name": benchmark,
             "Total Return": b.total_return_bench,
             "Ann. Return": b.annualized_return_bench,
+            "Std. (ann.)": b.std_bench,
             "Sharpe": b.sharpe_bench,
             "Max Drawdown": b.max_dd_bench,
         }
@@ -302,6 +310,9 @@ def format_summary_table(summary: pd.DataFrame) -> pd.DataFrame:
         lambda x: f"{x:.2%}" if np.isfinite(x) else "nan"
     )
     out["Ann. Return"] = out["Ann. Return"].map(
+        lambda x: f"{x:.2%}" if np.isfinite(x) else "nan"
+    )
+    out["Std. (ann.)"] = out["Std. (ann.)"].map(
         lambda x: f"{x:.2%}" if np.isfinite(x) else "nan"
     )
     out["Max Drawdown"] = out["Max Drawdown"].map(

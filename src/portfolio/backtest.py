@@ -21,6 +21,8 @@ class BacktestResult:
     cum_bench: pd.Series
     sharpe_port: float
     sharpe_bench: float
+    std_port: float
+    std_bench: float
     max_dd_port: float
     max_dd_bench: float
 
@@ -83,6 +85,11 @@ class PortfolioBacktester:
         cum_b = (1 + bench_ret).cumprod()
         max_dd_bench = (cum_b / cum_b.cummax() - 1).min()
 
+        ann_factor = np.sqrt(252)
+
+        std_port = port_ret.std() * ann_factor
+        std_bench = bench_ret.std() * ann_factor
+
         return BacktestResult(
             name=name,
             port_ret=port_ret,
@@ -91,6 +98,8 @@ class PortfolioBacktester:
             cum_bench=cum_b,
             sharpe_port=sharpe_port,
             sharpe_bench=sharpe_bench,
+            std_port=std_port,
+            std_bench=std_bench,
             max_dd_port=max_dd_port,
             max_dd_bench=max_dd_bench,
         )

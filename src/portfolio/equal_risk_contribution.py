@@ -111,9 +111,9 @@ def equal_risk_contribution(
     rc = risk_contributions(w, Sigma)
     rc_share = rc / rc.sum()
 
-    print("ERC check:")
-    print("RC share std:", rc_share.std())
-    print("RC share min/max:", rc_share.min(), rc_share.max())
+    # print("ERC check:")
+    # print("RC share std:", rc_share.std())
+    # print("RC share min/max:", rc_share.min(), rc_share.max())
 
     # -----------------------
     return w

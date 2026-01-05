@@ -94,7 +94,6 @@ class RollingMVStrategy:
             if self.use_auto_target:
                 # daily target return = cross-sectional mean daily return in window
                 target_return = window_ret.mean(axis=0).mean()
-                print(target_return)
             else:
                 target_return = None
 
@@ -304,17 +303,13 @@ class RollingERCStrategy:
                 continue
 
             Sigma_df = self.risk_estimator.estimate(window_ret)
-            print(Sigma_df)
             Sigma = Sigma_df.to_numpy()
 
             w = equal_risk_contribution(
                 Sigma,
                 short_selling=False,
             )
-            rc = risk_contributions(w, Sigma)
-
-            print("RC std / mean:", rc.std() / rc.mean())
-            print("Weights std:", w.std())
+            # rc = risk_contributions(w, Sigma)
 
             weights_list.append(w)
             index_list.append(d)

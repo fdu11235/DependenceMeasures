@@ -305,3 +305,15 @@ src/output/smi_target/weights_mutual_information.csv
 src/output/smi_target/weights_pearson.csv
 src/output/smi_target/weights_spearman.csv
 src/output/smi_target/weights_tfdc.csv
+src/output/figures/erc_smi/old/WuFengPalomar-SP2019 - sparse rpp.pdf
+src/output/figures/mv_smi_target/weight_evolution_smi_mi.pdf
+src/output/figures/mv_smi_target/weight_evolution_smi_pearson.pdf
+src/output/figures/mv_smi_target/weight_evolution_smi_spearman.pdf
+src/output/figures/mv_smi_target/weight_evolution_smi_tfdc.pdf
+src/output/smi/MV_smi_summary_table.xlsx
+src/output/smi_expanded/MV_smi_expanded_summary_table_target.xlsx
+src/output/smi_expanded/MV_smi_expanded_summary_table.xlsx
+src/output/smi_expanded/smi__expanded_results.pdf
+src/eda.ipynb
+src/eda.ipynb
+src/eda.ipynb
