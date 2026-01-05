@@ -28,7 +28,7 @@ def digitize_returns(
 
 def entropy(col: np.ndarray, n_states: int) -> float:
     """
-    Shannon entropy (base 2) of a discrete variable given as integer states.
+    Shannon entropy of a discrete variable given as integer states.
     """
     counts = np.bincount(col, minlength=n_states)
     p = counts / counts.sum()
@@ -69,7 +69,7 @@ def mi(X: np.ndarray, Y: np.ndarray, n_states: int) -> float:
 
 def normalize_mi(mi_val: float, h_x: float, h_y: float, method: str = "raw") -> float:
     """
-    Normalize mutual information using entropy-based schemes (e.g., Novais et al. 2022).
+    Normalize mutual information using entropy-based schemes
 
     Parameters
     ----------
