@@ -10,9 +10,7 @@ def load_prices(path: str) -> pd.DataFrame:
     df = pd.read_excel(path)
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.set_index("Date").sort_index()
-    df = df.drop(
-        columns=["AMRZ.S", "ACLN.S", "SUNN.S", "SDZ.S", "GALD.S"], errors="ignore"
-    )
+
     return df
 
 

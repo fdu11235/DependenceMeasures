@@ -319,3 +319,14 @@ src/eda.ipynb
 src/eda.ipynb
 src/output/smi/MV_smi_expanded_results.pdf
 src/output/smi/MV_smi_expanded_summary_table.xlsx
+src/output/ec/EC_sp500_results.pdf
+.gitignore
+src/output/ec/EC_sp500_summary_table.xlsx
+src/data/smi_prices_clean.xlsx
+src/data/smi+smim_prices_clean.xlsx
+src/output/smi/smi_expanded_results.pdf
+src/output/mv_sp500/weight_evolution_MI.pdf
+src/output/mv_sp500/weight_evolution_pearson.pdf
+src/output/mv_sp500/weight_evolution_tfdc.pdf
+src/output/mv_sp500/weights_mutual_information.csv
+src/output/mv_sp500/weights_pearson.csv

@@ -16,7 +16,7 @@ def entropy_mi_matrix(
         Σ[i,i] = H(X_i)
         Σ[i,j] = MI(X_i, X_j)  for i != j
 
-    where H is Shannon entropy (base 2)
+    where H is entropy
     and MI is mutual information using histogram-based discretization.
 
     Parameters

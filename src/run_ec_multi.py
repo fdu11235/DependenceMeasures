@@ -21,12 +21,14 @@ from portfolio.backtest import PortfolioBacktester
 
 
 def main():
-    prices = load_prices("data/smi+smim_prices_cleaned.xlsx")
+    prices = load_prices(
+        "data/sp500_cleaned.xlsx"
+    )  # use smi_prices_clean.xlsx, smi+smim_prices_clean.xlsx or sp500_cleaned.xlsx
     df_ret = compute_returns(prices)
 
     bt = PortfolioBacktester(
-        prices_path="data/smi+smim_prices_cleaned.xlsx",
-        benchmark_path="data/smi_expanded.xlsx",
+        prices_path="data/sp500_cleaned.xlsx",  # use smi_prices_clean.xlsx, smi+smim_prices_clean.xlsx or sp500_cleaned.xlsx
+        benchmark_path="data/spx.xlsx",  # use smi.xlsx, smi_expanded.xlsx or spx.xlsx
         start_year=2023,
     )
 
@@ -78,14 +80,14 @@ def main():
 
     plot_cumulative(
         results,
-        benchmark_label="SMI Expanded",
-        save_path="output/EC_smi_expanded_results.pdf",
+        benchmark_label="SPX",
+        save_path="output/ec/EC_sp500_results.pdf",
     )
 
-    summary = build_summary_table(results, "SMI Expanded")
+    summary = build_summary_table(results, "SPX")
     summary_fmt = format_summary_table(summary)
     print(summary_fmt)
-    summary_fmt.to_excel("output/EC_smi_expanded_summary_table.xlsx")
+    summary_fmt.to_excel("output/ec/EC_sp500_summary_table.xlsx")
 
 
 if __name__ == "__main__":

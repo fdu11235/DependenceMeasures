@@ -33,7 +33,7 @@ def empirical_copula_hist(
     Parameters
     ----------
     u, v : array-like, shape (T,)
-        Values in [0,1] (typically output of empirical_copula_transform).
+        Values in [0,1].
     n_bins : int
         Number of bins along each axis.
 

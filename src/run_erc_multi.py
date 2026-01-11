@@ -18,12 +18,14 @@ from portfolio.backtest import PortfolioBacktester
 
 
 def main():
-    prices = load_prices("data/smi+smim_prices_cleaned.xlsx")
+    prices = load_prices(
+        "data/smi+smim_prices_clean.xlsx"
+    )  # use smi_prices_clean.xlsx, smi+smim_prices_clean.xlsx or sp500_cleaned.xlsx
     df_ret = compute_returns(prices)
 
     bt = PortfolioBacktester(
-        prices_path="data/smi+smim_prices_cleaned.xlsx",
-        benchmark_path="data/smi_expanded.xlsx",
+        prices_path="data/smi+smim_prices_clean.xlsx",  # use smi_prices_clean.xlsx, smi+smim_prices_clean.xlsx or sp500_cleaned.xlsx
+        benchmark_path="data/smi_expanded.xlsx",  # use smi.xlsx, smi_expanded.xlsx or spx.xlsx
         start_year=2023,
     )
 
