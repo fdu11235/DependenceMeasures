@@ -330,3 +330,4 @@ src/output/mv_sp500/weight_evolution_pearson.pdf
 src/output/mv_sp500/weight_evolution_tfdc.pdf
 src/output/mv_sp500/weights_mutual_information.csv
 src/output/mv_sp500/weights_pearson.csv
+src/output/mv_sp500/ssrn-2009778.pdf
